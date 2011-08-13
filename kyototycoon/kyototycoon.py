@@ -90,3 +90,6 @@ class KyotoTycoon:
 
     def match_regex(self, regex, max=None, db=None):
         return self.core.match_regex(regex, max, db)
+
+    def cursor(self):
+        return self.core.cursor()

@@ -27,6 +27,286 @@ KT_PACKER_PICKLE = 1
 KT_PACKER_JSON   = 2
 KT_PACKER_STRING = 3
 
+def _dict_to_tsv(dict):
+    return '\n'.join(k + '\t' + str(v) for (k, v) in dict.items())
+
+def _tsv_to_dict(tsv_str):
+    rv = {}
+    for row in tsv_str.split('\n'):
+        kv = row.split('\t')
+        if len(kv) == 2:
+            rv[kv[0]] = kv[1]
+    return rv
+
+
+class Cursor:
+    cursor_id_counter = 1
+
+    def __init__(self, protocol_handler):
+        self.protocol_handler = protocol_handler
+        self.cursor_id = Cursor.cursor_id_counter
+        Cursor.cursor_id_counter += 1
+
+        self.err = kt_error.KyotoTycoonError()
+        self.pack = self.protocol_handler._pickle_packer
+        self.unpack = self.protocol_handler._pickle_unpacker
+        self.pack_type = KT_PACKER_PICKLE
+
+
+    def jump(self, key=None, db=None):
+        path = '/rpc/cur_jump'
+        if db:
+            db = urllib.quote(db, safe='')
+            path += '?DB=' + db
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+        if key:
+            request_dict['key'] = key
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        return
+
+    def jump_back(self, key=None, db=None):
+        path = '/rpc/cur_jump_back'
+        if db:
+            db = urllib.quote(db, safe='')
+            path += '?DB=' + db
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+        if key:
+            request_dict['key'] = key
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        return
+
+    def step(self):
+        path = '/rpc/cur_step'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        return
+
+    def step_back(self):
+        path = '/rpc/cur_step_back'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        return
+
+    def set_value(self, value, step=False, xt=None):
+        path = '/rpc/cur_set_value'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+        request_dict['value'] = self.pack(value)
+        if step:
+            request_dict['step'] = True
+        if xt:
+            request_dict['xt'] = xt
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+
+    def remove(self):
+        path = '/rpc/cur_remove'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        return
+
+    def get_key(self, step=False):
+        path = '/rpc/cur_get_key'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+        if step:
+            request_dict['step'] = True
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        return urllib.unquote(_tsv_to_dict(body)['key'])
+
+    def get_value(self, step=False):
+        path = '/rpc/cur_get_value'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+        if step:
+            request_dict['step'] = True
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        return self.unpack(urllib.unquote(_tsv_to_dict(body)['value']))
+
+    def get(self, step=False):
+        path = '/rpc/cur_get'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+        if step:
+            request_dict['step'] = True
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status == 404:
+            self.err.set_error(self.err.NOTFOUND)
+            return None
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        res_dict = _tsv_to_dict(body)
+        key = urllib.unquote(res_dict['key'])
+        value = self.unpack(urllib.unquote(res_dict['value']))
+        return key, value
+
+    def seize(self):
+        path = '/rpc/cur_seize'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+        if step:
+            request_dict['step'] = True
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        res_dict = _tsv_to_dict(body)
+        res_dict['key'] = urllib.unquote(res_dict['key'])
+        res_dict['value'] = self.unpack(urllib.unquote(res_dict['value']))
+        return res_dict
+
+    def delete(self):
+        path = '/rpc/cur_seize'
+
+        request_dict = {}
+        request_dict['CUR'] = self.cursor_id
+
+        request_body = _dict_to_tsv(request_dict)
+        self.protocol_handler.conn.request('POST', path, body=request_body,
+                          headers=KT_HTTP_HEADER)
+
+        res = self.protocol_handler.conn.getresponse()
+        body = res.read()
+
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
+
+        self.err.set_success()
+        return True
+
+
+
 class ProtocolHandler:
     def __init__(self, pickle_protocol=2):
         self.err = kt_error.KyotoTycoonError()
@@ -37,6 +317,9 @@ class ProtocolHandler:
 
     def error(self):
         return self.err
+
+    def cursor(self):
+        return Cursor(self)
 
     def open(self, host, port, timeout):
         try:
@@ -118,7 +401,7 @@ class ProtocolHandler:
             return False
 
         self.err.set_success()
-        return int(self._tsv_to_dict(body)['num'])
+        return int(_tsv_to_dict(body)['num'])
 
     def remove_bulk(self, keys, atomic, db):
         if not isinstance(keys, list):
@@ -153,7 +436,7 @@ class ProtocolHandler:
             return False
 
         self.err.set_success()
-        return int(self._tsv_to_dict(body)['num'])
+        return int(_tsv_to_dict(body)['num'])
 
     def get_bulk(self, keys, atomic, db):
         if not isinstance(keys, list):
@@ -188,7 +471,7 @@ class ProtocolHandler:
             return None
 
         rv = {}
-        res_dict = self._tsv_to_dict(body)
+        res_dict = _tsv_to_dict(body)
         n = res_dict.pop('num')
 
         if n == 0:
@@ -254,7 +537,7 @@ class ProtocolHandler:
         if db:
             request_dict['DB'] = db
 
-        request_body = self._dict_to_tsv(request_dict)
+        request_body = _dict_to_tsv(request_dict)
         self.conn.request('POST', '/rpc/match_prefix',
                           body=request_body, headers=KT_HTTP_HEADER)
 
@@ -265,7 +548,7 @@ class ProtocolHandler:
             self.err.set_error(self.err.EMISC)
             return False
 
-        res_dict = self._tsv_to_dict(body)
+        res_dict = _tsv_to_dict(body)
         n = res_dict.pop('num')
 
         if n == 0:
@@ -291,7 +574,7 @@ class ProtocolHandler:
         if max:
             request_dict['max'] = max
 
-        request_body = self._dict_to_tsv(request_dict)
+        request_body = _dict_to_tsv(request_dict)
         self.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
@@ -303,7 +586,7 @@ class ProtocolHandler:
             return None
 
         rv = []
-        res_dict = self._tsv_to_dict(body)
+        res_dict = _tsv_to_dict(body)
 
         if res_dict.pop('num') < 1:
             self.err.set_error(self.err.NOTFOUND)
@@ -373,7 +656,7 @@ class ProtocolHandler:
         if expire:
             request_dict['xt'] = expire
 
-        request_body = self._dict_to_tsv(request_dict)
+        request_body = _dict_to_tsv(request_dict)
 
         self.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
@@ -471,7 +754,7 @@ class ProtocolHandler:
             return None
 
         self.err.set_success()
-        return int(self._tsv_to_dict(body)['num'])
+        return int(_tsv_to_dict(body)['num'])
 
     def increment_double(self, key, delta, expire, db):
         if key is None:
@@ -495,7 +778,7 @@ class ProtocolHandler:
             return None
 
         self.err.set_success()
-        return float(self._tsv_to_dict(body)['num'])
+        return float(_tsv_to_dict(body)['num'])
 
     def report(self):
         self.conn.request('GET', '/rpc/report')
@@ -507,7 +790,7 @@ class ProtocolHandler:
             return None
 
         self.err.set_success()
-        return self._tsv_to_dict(body)
+        return _tsv_to_dict(body)
 
     def status(self, db=None):
         url = '/rpc/status'
@@ -525,7 +808,7 @@ class ProtocolHandler:
             return None
 
         self.err.set_success()
-        return self._tsv_to_dict(body)
+        return _tsv_to_dict(body)
 
     def clear(self, db=None):
         url = '/rpc/clear'
@@ -556,17 +839,6 @@ class ProtocolHandler:
         if st is None:
             return None
         return int(st['size'])
-
-    def _dict_to_tsv(self, dict):
-        return '\n'.join(k + '\t' + str(v) for (k, v) in dict.items())
-
-    def _tsv_to_dict(self, tsv_str):
-        rv = {}
-        for row in tsv_str.split('\n'):
-            kv = row.split('\t')
-            if len(kv) == 2:
-                rv[kv[0]] = kv[1]
-        return rv
 
     def _rest_put(self, operation, key, value, expire):
         headers = { 'X-Kt-Mode' : operation }
