@@ -28,7 +28,7 @@ KT_PACKER_JSON   = 2
 KT_PACKER_STRING = 3
 
 def _dict_to_tsv(dict):
-    return '\n'.join(k + '\t' + str(v) for (k, v) in dict.items())
+    return '\n'.join(urllib.quote(k) + '\t' + urllib.quote(str(v)) for (k, v) in dict.items())
 
 def _tsv_to_dict(tsv_str):
     rv = {}
