@@ -35,7 +35,7 @@ def _tsv_to_dict(tsv_str):
     for row in tsv_str.split('\n'):
         kv = row.split('\t')
         if len(kv) == 2:
-            rv[kv[0]] = kv[1]
+            rv[urllib.unquote(kv[0])] = urllib.unquote(kv[1])
     return rv
 
 
@@ -70,7 +70,6 @@ class Cursor:
 
         res = self.protocol_handler.conn.getresponse()
         body = res.read()
-
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -95,7 +94,6 @@ class Cursor:
 
         res = self.protocol_handler.conn.getresponse()
         body = res.read()
-
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -115,7 +113,6 @@ class Cursor:
 
         res = self.protocol_handler.conn.getresponse()
         body = res.read()
-
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -135,7 +132,6 @@ class Cursor:
 
         res = self.protocol_handler.conn.getresponse()
         body = res.read()
-
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -160,7 +156,6 @@ class Cursor:
 
         res = self.protocol_handler.conn.getresponse()
         body = res.read()
-
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -179,7 +174,6 @@ class Cursor:
 
         res = self.protocol_handler.conn.getresponse()
         body = res.read()
-
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -207,7 +201,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return urllib.unquote(_tsv_to_dict(body)['key'])
+        return _tsv_to_dict(body)['key']
 
     def get_value(self, step=False):
         path = '/rpc/cur_get_value'
@@ -229,7 +223,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return self.unpack(urllib.unquote(_tsv_to_dict(body)['value']))
+        return self.unpack(_tsv_to_dict(body)['value'])
 
     def get(self, step=False):
         path = '/rpc/cur_get'
@@ -256,8 +250,8 @@ class Cursor:
 
         self.err.set_success()
         res_dict = _tsv_to_dict(body)
-        key = urllib.unquote(res_dict['key'])
-        value = self.unpack(urllib.unquote(res_dict['value']))
+        key = res_dict['key']
+        value = self.unpack(res_dict['value'])
         return key, value
 
     def seize(self):
@@ -265,8 +259,6 @@ class Cursor:
 
         request_dict = {}
         request_dict['CUR'] = self.cursor_id
-        if step:
-            request_dict['step'] = True
 
         request_body = _dict_to_tsv(request_dict)
         self.protocol_handler.conn.request('POST', path, body=request_body,
@@ -281,8 +273,8 @@ class Cursor:
 
         self.err.set_success()
         res_dict = _tsv_to_dict(body)
-        res_dict['key'] = urllib.unquote(res_dict['key'])
-        res_dict['value'] = self.unpack(urllib.unquote(res_dict['value']))
+        res_dict['key'] = res_dict['key']
+        res_dict['value'] = self.unpack(res_dict['value'])
         return res_dict
 
     def delete(self):
@@ -297,7 +289,6 @@ class Cursor:
 
         res = self.protocol_handler.conn.getresponse()
         body = res.read()
-
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -480,7 +471,7 @@ class ProtocolHandler:
 
         for k, v in res_dict.items():
             if v is not None:
-                rv[urllib.unquote(k[1:])] = self.unpack(urllib.unquote(v))
+                rv[k[1:]] = self.unpack(v)
 
         self.err.set_success()
         return rv
