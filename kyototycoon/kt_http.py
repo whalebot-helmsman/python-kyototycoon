@@ -5,6 +5,7 @@
 # Redistribution and use of this source code is licensed under
 # the BSD license. See COPYING file for license description.
 
+import base64
 import httplib
 import urllib
 import struct
@@ -28,14 +29,22 @@ KT_PACKER_JSON   = 2
 KT_PACKER_STRING = 3
 
 def _dict_to_tsv(dict):
-    return '\n'.join(urllib.quote(k) + '\t' + urllib.quote(str(v)) for (k, v) in dict.items())
+    return '\n'.join(urllib.quote(k, safe='') + '\t' + urllib.quote(str(v), safe='') for (k, v) in dict.items())
 
-def _tsv_to_dict(tsv_str):
+def _tsv_to_dict(tsv_str, content_type=''):
     rv = {}
+    # Select the appropriate decoding function to use based on the response headers
+    if content_type.endswith('colenc=B'):
+        decode = base64.decodestring
+    elif content_type.endswith('colenc=U'):
+        decode = urllib.unquote
+    else:
+        decode = lambda x: x
+
     for row in tsv_str.split('\n'):
         kv = row.split('\t')
         if len(kv) == 2:
-            rv[urllib.unquote(kv[0])] = urllib.unquote(kv[1])
+            rv[decode(kv[0])] = decode(kv[1])
     return rv
 
 
@@ -201,7 +210,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return _tsv_to_dict(body)['key']
+        return _tsv_to_dict(body, res.getheader('Content-Type', ''))['key']
 
     def get_value(self, step=False):
         path = '/rpc/cur_get_value'
@@ -223,7 +232,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return self.unpack(_tsv_to_dict(body)['value'])
+        return self.unpack(_tsv_to_dict(body, res.getheader('Content-Type', ''))['value'])
 
     def get(self, step=False):
         path = '/rpc/cur_get'
@@ -249,7 +258,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        res_dict = _tsv_to_dict(body)
+        res_dict = _tsv_to_dict(body, res.getheader('Content-Type', ''))
         key = res_dict['key']
         value = self.unpack(res_dict['value'])
         return key, value
@@ -272,7 +281,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        res_dict = _tsv_to_dict(body)
+        res_dict = _tsv_to_dict(body, res.getheader('Content-Type', ''))
         res_dict['key'] = res_dict['key']
         res_dict['value'] = self.unpack(res_dict['value'])
         return res_dict
@@ -392,7 +401,7 @@ class ProtocolHandler:
             return False
 
         self.err.set_success()
-        return int(_tsv_to_dict(body)['num'])
+        return int(_tsv_to_dict(body, res.getheader('Content-Type', ''))['num'])
 
     def remove_bulk(self, keys, atomic, db):
         if not isinstance(keys, list):
@@ -427,7 +436,7 @@ class ProtocolHandler:
             return False
 
         self.err.set_success()
-        return int(_tsv_to_dict(body)['num'])
+        return int(_tsv_to_dict(body, res.getheader('Content-Type', ''))['num'])
 
     def get_bulk(self, keys, atomic, db):
         if not isinstance(keys, list):
@@ -462,7 +471,7 @@ class ProtocolHandler:
             return None
 
         rv = {}
-        res_dict = _tsv_to_dict(body)
+        res_dict = _tsv_to_dict(body, res.getheader('Content-Type', ''))
         n = res_dict.pop('num')
 
         if n == 0:
@@ -539,7 +548,7 @@ class ProtocolHandler:
             self.err.set_error(self.err.EMISC)
             return False
 
-        res_dict = _tsv_to_dict(body)
+        res_dict = _tsv_to_dict(body, res.getheader('Content-Type', ''))
         n = res_dict.pop('num')
 
         if n == 0:
@@ -577,7 +586,7 @@ class ProtocolHandler:
             return None
 
         rv = []
-        res_dict = _tsv_to_dict(body)
+        res_dict = _tsv_to_dict(body, res.getheader('Content-Type', ''))
 
         if res_dict.pop('num') < 1:
             self.err.set_error(self.err.NOTFOUND)
@@ -745,7 +754,7 @@ class ProtocolHandler:
             return None
 
         self.err.set_success()
-        return int(_tsv_to_dict(body)['num'])
+        return int(_tsv_to_dict(body, res.getheader('Content-Type', ''))['num'])
 
     def increment_double(self, key, delta, expire, db):
         if key is None:
@@ -769,7 +778,7 @@ class ProtocolHandler:
             return None
 
         self.err.set_success()
-        return float(_tsv_to_dict(body)['num'])
+        return float(_tsv_to_dict(body, res.getheader('Content-Type', ''))['num'])
 
     def report(self):
         self.conn.request('GET', '/rpc/report')
@@ -781,7 +790,7 @@ class ProtocolHandler:
             return None
 
         self.err.set_success()
-        return _tsv_to_dict(body)
+        return _tsv_to_dict(body, res.getheader('Content-Type', ''))
 
     def status(self, db=None):
         url = '/rpc/status'
@@ -799,7 +808,7 @@ class ProtocolHandler:
             return None
 
         self.err.set_success()
-        return _tsv_to_dict(body)
+        return _tsv_to_dict(body, res.getheader('Content-Type', ''))
 
     def clear(self, db=None):
         url = '/rpc/clear'
