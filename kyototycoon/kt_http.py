@@ -342,7 +342,7 @@ class ProtocolHandler:
         body = res.read()
 
         if res.status != 200:
-           self.err.set_error(err.EMISC)
+           self.err.set_error(self.err.EMISC)
            return False
 
         self.err.set_success()
