@@ -84,7 +84,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return
+        return True
 
     def jump_back(self, key=None, db=None):
         path = '/rpc/cur_jump_back'
@@ -108,7 +108,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return
+        return True
 
     def step(self):
         path = '/rpc/cur_step'
@@ -127,7 +127,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return
+        return True
 
     def step_back(self):
         path = '/rpc/cur_step_back'
@@ -146,7 +146,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return
+        return True
 
     def set_value(self, value, step=False, xt=None):
         path = '/rpc/cur_set_value'
@@ -170,6 +170,7 @@ class Cursor:
             return False
 
         self.err.set_success()
+        return True
 
     def remove(self):
         path = '/rpc/cur_remove'
@@ -188,7 +189,7 @@ class Cursor:
             return False
 
         self.err.set_success()
-        return
+        return True
 
     def get_key(self, step=False):
         path = '/rpc/cur_get_key'
