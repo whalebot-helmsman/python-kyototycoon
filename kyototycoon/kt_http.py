@@ -405,11 +405,18 @@ class ProtocolHandler:
         return int(_tsv_to_dict(body, res.getheader('Content-Type', ''))['num'])
 
     def remove_bulk(self, keys, atomic, db):
-        if not isinstance(keys, list):
+        if not hasattr(keys, '__iter__'):
             self.err.set_error(self.err.LOGIC)
             return 0
 
-        if len(keys) < 1:
+        request_header = ''
+        if atomic:
+            request_header = 'atomic\t\n'
+
+        request_body = ''
+        for key in keys:
+            request_body += '_' + urllib.quote(key, safe='') + '\t\n'
+        if len(request_body) < 1:
             self.err.set_error(self.err.LOGIC)
             return 0
 
@@ -417,16 +424,7 @@ class ProtocolHandler:
         if db:
             db = urllib.quote(db, safe='')
             path += '?DB=' + db
-
-        request_body = ''
-
-        if atomic:
-            request_body = 'atomic\t\n'
-
-        for key in keys:
-            request_body += '_' + urllib.quote(key, safe='') + '\t\n'
-
-        self.conn.request('POST', path, body=request_body,
+        self.conn.request('POST', path, body=request_header + request_body,
                           headers=KT_HTTP_HEADER)
 
         res = self.conn.getresponse()
@@ -440,11 +438,19 @@ class ProtocolHandler:
         return int(_tsv_to_dict(body, res.getheader('Content-Type', ''))['num'])
 
     def get_bulk(self, keys, atomic, db):
-        if not isinstance(keys, list):
+        if not hasattr(keys, '__iter__'):
             self.err.set_error(self.err.LOGIC)
             return None
 
-        if len(keys) < 1:
+        request_header = ''
+        if atomic:
+            request_header = 'atomic\t\n'
+
+        request_body = ''
+        for key in keys:
+            request_body += '_' + urllib.quote(key, safe='') + '\t\n'
+
+        if len(request_body) < 1:
             self.err.set_error(self.err.LOGIC)
             return {}
 
@@ -452,16 +458,7 @@ class ProtocolHandler:
         if db:
             db = urllib.quote(db, safe='')
             path += '?DB=' + db
-
-        request_body = ''
-
-        if atomic:
-            request_body = 'atomic\t\n'
-
-        for key in keys:
-            request_body += '_' + urllib.quote(key, safe='') + '\t\n'
-
-        self.conn.request('POST', path, body=request_body,
+        self.conn.request('POST', path, body=request_header + request_body,
                           headers=KT_HTTP_HEADER)
 
         res = self.conn.getresponse()
