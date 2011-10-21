@@ -472,9 +472,9 @@ class ProtocolHandler:
         res_dict = _tsv_to_dict(body, res.getheader('Content-Type', ''))
         n = res_dict.pop('num')
 
-        if n == 0:
+        if n == '0':
             self.err.set_error(self.err.NOTFOUND)
-            return None
+            return {}
 
         for k, v in res_dict.items():
             if v is not None:
@@ -549,9 +549,9 @@ class ProtocolHandler:
         res_dict = _tsv_to_dict(body, res.getheader('Content-Type', ''))
         n = res_dict.pop('num')
 
-        if n == 0:
+        if n == '0':
             self.err.set_error(self.err.NOTFOUND)
-            return None
+            return []
 
         for k in res_dict.keys():
             rv.append(k[1:])
@@ -586,7 +586,7 @@ class ProtocolHandler:
         rv = []
         res_dict = _tsv_to_dict(body, res.getheader('Content-Type', ''))
 
-        if res_dict.pop('num') < 1:
+        if res_dict.pop('num') == '0':
             self.err.set_error(self.err.NOTFOUND)
             return []
 
