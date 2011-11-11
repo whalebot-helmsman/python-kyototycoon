@@ -648,9 +648,9 @@ class ProtocolHandler:
         request_dict = { 'key': key }
 
         if old_val:
-            request_dict['oval'] = urllib.quote(self.pack(old_val), safe='')
+            request_dict['oval'] = self.pack(old_val)
         if new_val:
-            request_dict['nval'] = urllib.quote(self.pack(new_val), safe='')
+            request_dict['nval'] = self.pack(new_val)
         if expire:
             request_dict['xt'] = expire
 
