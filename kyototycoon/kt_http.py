@@ -7,10 +7,11 @@
 
 import base64
 import httplib
-import urllib
 import struct
 import time
 import kt_error
+from percentcoding import quote, unquote
+#from urllib import quote, unquote
 
 try:
     import cPickle as pickle
@@ -29,7 +30,7 @@ KT_PACKER_JSON   = 2
 KT_PACKER_STRING = 3
 
 def _dict_to_tsv(dict):
-    return '\n'.join(urllib.quote(k, safe='') + '\t' + urllib.quote(str(v), safe='') for (k, v) in dict.items())
+    return '\n'.join(quote(k) + '\t' + quote(str(v)) for (k, v) in dict.items())
 
 def _tsv_to_dict(tsv_str, content_type=''):
     rv = {}
@@ -37,7 +38,7 @@ def _tsv_to_dict(tsv_str, content_type=''):
     if content_type.endswith('colenc=B'):
         decode = base64.decodestring
     elif content_type.endswith('colenc=U'):
-        decode = urllib.unquote
+        decode = unquote
     else:
         decode = lambda x: x
 
@@ -65,7 +66,7 @@ class Cursor:
     def jump(self, key=None, db=None):
         path = '/rpc/cur_jump'
         if db:
-            db = urllib.quote(db, safe='')
+            db = quote(db)
             path += '?DB=' + db
 
         request_dict = {}
@@ -89,7 +90,7 @@ class Cursor:
     def jump_back(self, key=None, db=None):
         path = '/rpc/cur_jump_back'
         if db:
-            db = urllib.quote(db, safe='')
+            db = quote(db)
             path += '?DB=' + db
 
         request_dict = {}
@@ -355,7 +356,7 @@ class ProtocolHandler:
         path = key
         if db:
             path = '/%s/%s' % (db, key)
-        path = urllib.quote(path.encode('UTF-8'), safe='')
+        path = quote(path.encode('UTF-8'))
 
         self.conn.request('GET', path)
         rv = self.conn.getresponse()
@@ -378,7 +379,7 @@ class ProtocolHandler:
 
         path = '/rpc/set_bulk'
         if db:
-            db = urllib.quote(db, safe='')
+            db = quote(db)
             path += '?DB=' + db
 
         request_body = ''
@@ -387,8 +388,8 @@ class ProtocolHandler:
             request_body = 'atomic\t\n'
 
         for k, v in kv_dict.items():
-            k = urllib.quote(k, safe='')
-            v = urllib.quote(self.pack(v), safe='')
+            k = quote(k)
+            v = quote(self.pack(v))
             request_body += '_' + k + '\t' + v + '\n'
 
         self.conn.request('POST', path, body=request_body,
@@ -415,14 +416,14 @@ class ProtocolHandler:
 
         request_body = ''
         for key in keys:
-            request_body += '_' + urllib.quote(key, safe='') + '\t\n'
+            request_body += '_' + quote(key) + '\t\n'
         if len(request_body) < 1:
             self.err.set_error(self.err.LOGIC)
             return 0
 
         path = '/rpc/remove_bulk'
         if db:
-            db = urllib.quote(db, safe='')
+            db = quote(db)
             path += '?DB=' + db
         self.conn.request('POST', path, body=request_header + request_body,
                           headers=KT_HTTP_HEADER)
@@ -448,7 +449,7 @@ class ProtocolHandler:
 
         request_body = ''
         for key in keys:
-            request_body += '_' + urllib.quote(key, safe='') + '\t\n'
+            request_body += '_' + quote(key) + '\t\n'
 
         if len(request_body) < 1:
             self.err.set_error(self.err.LOGIC)
@@ -456,7 +457,7 @@ class ProtocolHandler:
 
         path = '/rpc/get_bulk'
         if db:
-            db = urllib.quote(db, safe='')
+            db = quote(db)
             path += '?DB=' + db
         self.conn.request('POST', path, body=request_header + request_body,
                           headers=KT_HTTP_HEADER)
@@ -491,7 +492,7 @@ class ProtocolHandler:
         path = key
         if db:
             path = '/%s/%s' % (db, key)
-        path = urllib.quote(path.encode('UTF-8'), safe='')
+        path = quote(path.encode('UTF-8'))
 
         self.conn.request('GET', path)
         rv = self.conn.getresponse()
@@ -508,7 +509,7 @@ class ProtocolHandler:
         path = '/rpc/vacuum'
 
         if db:
-            db = urllib.quote(db, safe='')
+            db = quote(db)
             path += '?DB=' + db
 
         self.conn.request('GET', path)
@@ -603,13 +604,12 @@ class ProtocolHandler:
 
         if db:
             key = '/%s/%s' % (db, key)
-        key = urllib.quote(key.encode('UTF-8'), safe='')
+        key = quote(key.encode('UTF-8'))
         value = self.pack(value)
 
         self.err.set_success()
 
         status = self._rest_put('set', key, value, expire)
-
         if status != 201:
             self.err.set_error(self.err.EMISC)
             return False
@@ -625,7 +625,7 @@ class ProtocolHandler:
         if db:
             key = '/%s/%s' % (db, key)
 
-        key = urllib.quote(key.encode('UTF-8'), safe='')
+        key = quote(key.encode('UTF-8'))
         value = self.pack(value)
         status = self._rest_put('add', key, value, expire)
 
@@ -677,7 +677,7 @@ class ProtocolHandler:
         if db:
             key = '/%s/%s' % (db, key)
 
-        key = urllib.quote(key.encode('UTF-8'), safe='')
+        key = quote(key.encode('UTF-8'))
         self.conn.request('DELETE', key)
         rv = self.conn.getresponse()
         body = rv.read()
@@ -697,7 +697,7 @@ class ProtocolHandler:
         if db:
             key = '/%s/%s' % (db, key)
 
-        key = urllib.quote(key.encode('UTF-8'), safe='')
+        key = quote(key.encode('UTF-8'))
         value = self.pack(value)
         status = self._rest_put('replace', key, value, expire)
 
@@ -794,7 +794,7 @@ class ProtocolHandler:
         url = '/rpc/status'
 
         if db:
-            db = urllib.quote(db, safe='')
+            db = quote(db)
             url += '?DB=' + db
 
         self.conn.request('GET', url)
@@ -812,7 +812,7 @@ class ProtocolHandler:
         url = '/rpc/clear'
 
         if db:
-            db = urllib.quote(db, safe='')
+            db = quote(db)
             url += '?DB=' + db
 
         self.conn.request('GET', url)
