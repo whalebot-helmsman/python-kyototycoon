@@ -78,8 +78,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -102,8 +101,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -121,8 +119,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -140,8 +137,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -164,8 +160,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -183,8 +178,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -204,9 +198,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
-
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -226,9 +218,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
-
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -248,9 +238,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
-
+        res, body = self.protocol_handler.getresponse()
         if res.status == 404:
             self.err.set_error(self.err.NOTFOUND)
             return None
@@ -275,9 +263,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
-
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -298,8 +284,7 @@ class Cursor:
         self.protocol_handler.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.protocol_handler.conn.getresponse()
-        body = res.read()
+        res, body = self.protocol_handler.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -324,6 +309,12 @@ class ProtocolHandler:
         return Cursor(self)
 
     def open(self, host, port, timeout):
+        # Save connection parameters so the connection can be re-established
+        # on "Connection: close" response.
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+
         try:
             self.conn = httplib.HTTPConnection(host, port, timeout)
         except Exception, e:
@@ -337,11 +328,21 @@ class ProtocolHandler:
             raise e
         return True
 
-    def echo(self):
-        self.conn.request('POST', '/rpc/echo')
+    def getresponse(self):
         res = self.conn.getresponse()
         body = res.read()
 
+        if res.will_close:
+            self.conn.close()
+        if res.isclosed():
+            self.open(self.host, self.port, self.timeout)
+
+        return res, body
+
+    def echo(self):
+        self.conn.request('POST', '/rpc/echo')
+
+        res, body = self.getresponse()
         if res.status != 200:
            self.err.set_error(self.err.EMISC)
            return False
@@ -359,12 +360,14 @@ class ProtocolHandler:
         path = quote(path.encode('UTF-8'))
 
         self.conn.request('GET', path)
-        rv = self.conn.getresponse()
-        body = rv.read()
+        res, body = self.getresponse()
 
-        if rv.status == 404:
+        if res.status == 404:
             self.err.set_error(self.err.NOTFOUND)
             return None
+        if res.status != 200:
+            self.err.set_error(self.err.EMISC)
+            return False
 
         self.err.set_success()
         return self.unpack(body)
@@ -395,9 +398,7 @@ class ProtocolHandler:
         self.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -428,9 +429,7 @@ class ProtocolHandler:
         self.conn.request('POST', path, body=request_header + request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -462,9 +461,7 @@ class ProtocolHandler:
         self.conn.request('POST', path, body=request_header + request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return None
@@ -495,15 +492,14 @@ class ProtocolHandler:
         path = quote(path.encode('UTF-8'))
 
         self.conn.request('GET', path)
-        rv = self.conn.getresponse()
-        buf = rv.read()
 
-        if rv.status != 200:
+        res, body = self.getresponse()
+        if res.status != 200:
             self.err.set_error(self.err.NOTFOUND)
             return None
 
         self.err.set_success()
-        return struct.unpack('>q', buf)[0]
+        return struct.unpack('>q', body)[0]
 
     def vacuum(self, db):
         path = '/rpc/vacuum'
@@ -513,9 +509,8 @@ class ProtocolHandler:
             path += '?DB=' + db
 
         self.conn.request('GET', path)
-        res = self.conn.getresponse()
-        body = res.read()
 
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
 
@@ -540,9 +535,7 @@ class ProtocolHandler:
         self.conn.request('POST', '/rpc/match_prefix',
                           body=request_body, headers=KT_HTTP_HEADER)
 
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -577,9 +570,7 @@ class ProtocolHandler:
         self.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return None
@@ -659,9 +650,7 @@ class ProtocolHandler:
         self.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -679,10 +668,9 @@ class ProtocolHandler:
 
         key = quote(key.encode('UTF-8'))
         self.conn.request('DELETE', key)
-        rv = self.conn.getresponse()
-        body = rv.read()
 
-        if rv.status != 204:
+        res, body = self.getresponse()
+        if res.status != 204:
             self.err.set_error(self.err.NOTFOUND)
             return False
 
@@ -744,9 +732,7 @@ class ProtocolHandler:
         self.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return None
@@ -768,9 +754,7 @@ class ProtocolHandler:
         self.conn.request('POST', path, body=request_body,
                           headers=KT_HTTP_HEADER)
 
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return None
@@ -780,9 +764,7 @@ class ProtocolHandler:
 
     def report(self):
         self.conn.request('GET', '/rpc/report')
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return None
@@ -798,9 +780,7 @@ class ProtocolHandler:
             url += '?DB=' + db
 
         self.conn.request('GET', url)
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return None
@@ -816,9 +796,7 @@ class ProtocolHandler:
             url += '?DB=' + db
 
         self.conn.request('GET', url)
-        res = self.conn.getresponse()
-        body = res.read()
-
+        res, body = self.getresponse()
         if res.status != 200:
             self.err.set_error(self.err.EMISC)
             return False
@@ -845,9 +823,8 @@ class ProtocolHandler:
             headers["X-Kt-Xt"] = str(expire)
 
         self.conn.request('PUT', key, value, headers)
-        rv = self.conn.getresponse()
-        body = rv.read()
-        return rv.status
+        res, body = self.getresponse()
+        return res.status
 
     def _pickle_packer(self, data):
         return pickle.dumps(data, self.pickle_protocol)

@@ -12,7 +12,7 @@ setup(
     author_email='dev@torum.net',
     name='python-kyototycoon',
     description='Kyoto Tycoon Client Library',
-    version='0.4.1',
+    version='0.4.2',
     license='BSD',
     keywords='Kyoto Tycoon, Kyoto Cabinet',
     packages=['kyototycoon'],
