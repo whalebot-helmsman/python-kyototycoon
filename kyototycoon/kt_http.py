@@ -10,8 +10,10 @@ import httplib
 import struct
 import time
 import kt_error
-from percentcoding import quote, unquote
-#from urllib import quote, unquote
+try:
+    from percentcoding import quote, unquote
+except ImportError:
+    from urllib import quote, unquote
 
 try:
     import cPickle as pickle
