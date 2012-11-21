@@ -62,6 +62,12 @@ class Cursor:
         self.unpack = self.protocol_handler._pickle_unpacker
         self.pack_type = KT_PACKER_PICKLE
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        # Cleanup the cursor when leaving "with" blocks
+        self.delete()
 
     def jump(self, key=None, db=None):
         path = '/rpc/cur_jump'
@@ -275,7 +281,7 @@ class Cursor:
         return res_dict
 
     def delete(self):
-        path = '/rpc/cur_seize'
+        path = '/rpc/cur_delete'
 
         request_dict = {}
         request_dict['CUR'] = self.cursor_id
