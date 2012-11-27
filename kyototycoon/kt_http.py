@@ -324,7 +324,7 @@ class ProtocolHandler(object):
         self.timeout = timeout
 
         try:
-            self.conn = httplib.HTTPConnection(host, port, timeout)
+            self.conn = httplib.HTTPConnection(host, port, timeout=timeout)
         except Exception, e:
             raise e
         return True
@@ -342,7 +342,6 @@ class ProtocolHandler(object):
 
         if res.will_close:
             self.conn.close()
-        if res.isclosed():
             self.open(self.host, self.port, self.timeout)
 
         return res, body
