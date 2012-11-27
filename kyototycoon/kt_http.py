@@ -51,7 +51,7 @@ def _tsv_to_dict(tsv_str, content_type=''):
     return rv
 
 
-class Cursor:
+class Cursor(object):
     cursor_id_counter = 1
 
     def __init__(self, protocol_handler):
@@ -302,7 +302,7 @@ class Cursor:
 
 
 
-class ProtocolHandler:
+class ProtocolHandler(object):
     def __init__(self, pickle_protocol=2):
         self.err = kt_error.KyotoTycoonError()
         self.pickle_protocol = pickle_protocol
