@@ -13,13 +13,22 @@ provided by Kyoto Tycoon's original author(s).
 There is currently no documentation for this software but for
 the meantime please see kyototycoon.py for the interface.
 
+This fork is backwards compatible, and includes cursor support and significant
+performance improvements over the original library.
 
 INSTALLATION
 ----------------------
-python setup.py build
-sudo python setup.py install
+Using pip:
+
+    pip install python-kyototycoon
+
+Or, from source:
+
+    python setup.py build
+    sudo python setup.py install
 
 
 AUTHORS
 ----------------------
 Toru Maesaka <dev@torum.net>
+Stephen Hamer <stephen.hamer@upverter.com>
