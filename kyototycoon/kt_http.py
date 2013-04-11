@@ -13,7 +13,9 @@ import kt_error
 try:
     from percentcoding import quote, unquote
 except ImportError:
-    from urllib import quote, unquote
+    from urllib import quote as _quote
+    from urllib import unquote
+    quote = lambda s: _quote(s, safe="")
 
 try:
     import cPickle as pickle
